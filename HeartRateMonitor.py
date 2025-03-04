@@ -5,8 +5,9 @@ import logging
 from bleak import BleakScanner, BleakClient
 import threading
 import pystray
-from PIL import Image
+from PIL import Image, ImageFilter, ImageGrab
 import os
+from PIL import ImageTk
 
 # 添加日志配置
 logging.basicConfig(
@@ -24,6 +25,10 @@ class HeartRateMonitor:
         self.root.overrideredirect(True)
         self.root.attributes('-alpha', 1.0)
         self.root.attributes('-topmost', True)
+        
+        # 设置窗口透明
+        self.root.attributes('-transparentcolor', 'black')
+        self.root.configure(bg='black')
         
         # 添加置顶状态标志（默认为True）
         self.always_on_top = True
@@ -61,20 +66,19 @@ class HeartRateMonitor:
         self.label.pack(padx=20, pady=20)
         
         # 心率显示界面（初始隐藏）
-        self.heart_frame = ttk.Frame(self.main_frame)
-        self.heart_frame.configure(style='Transparent.TFrame')
+        self.heart_frame = tk.Frame(self.main_frame, bg='black')
         
-        # 使用普通的tk.Label代替ttk.Label以获得更好的字体渲染效果
+        # 使用单个Label显示心率
         self.heart_rate_label = tk.Label(
             self.heart_frame,
             text="❤ -- BPM",
             font=('Arial', 36, 'bold'),
             foreground='red',
-            bg='white'  # 设置背景色为白色（会被透明）
+            bg='black'
         )
         self.heart_rate_label.pack(padx=20, pady=20)
         
-        # 给心率标签也添加拖动功能
+        # 给心率标签添加拖动功能
         self.heart_rate_label.bind('<ButtonPress-1>', self.on_drag_start)
         self.heart_rate_label.bind('<B1-Motion>', self.on_drag_motion)
         
@@ -91,6 +95,7 @@ class HeartRateMonitor:
         
         self.client = None  # 添加客户端引用
         self.connected = False  # 添加连接状态标志
+        self.is_shutting_down = False  # 添加关闭标志
 
         # 修改样式配置
         self.style = ttk.Style()
@@ -100,6 +105,8 @@ class HeartRateMonitor:
         self.device_list.configure(bg='white')
 
         self.font_size = 36  # 默认字体大小
+        self.blur_radius = 10  # 默认模糊半径
+        self.update_background_job = None  # 用于存储更新背景的任务ID
 
     def run_event_loop(self):
         asyncio.set_event_loop(self.loop)
@@ -169,12 +176,20 @@ class HeartRateMonitor:
                 pystray.MenuItem("特大", lambda: self.change_font_size(64), radio=True, checked=lambda item: self.font_size == 64)
             )
             
+            # 添加模糊程度子菜单
+            blur_menu = pystray.Menu(
+                pystray.MenuItem("弱", lambda: self.change_blur(5), radio=True, checked=lambda item: self.blur_radius == 5),
+                pystray.MenuItem("中", lambda: self.change_blur(10), radio=True, checked=lambda item: self.blur_radius == 10),
+                pystray.MenuItem("强", lambda: self.change_blur(20), radio=True, checked=lambda item: self.blur_radius == 20)
+            )
+            
             # 创建系统托盘菜单
             menu = (
                 pystray.MenuItem("切换设备", self.show_device_selection),
                 pystray.MenuItem("固定穿透", self.toggle_click_through, checked=lambda item: self.click_through),
                 pystray.MenuItem("置于顶层", self.toggle_always_on_top, checked=lambda item: self.always_on_top),
-                pystray.MenuItem("字体大小", font_menu),  # 添加字体大小子菜单
+                pystray.MenuItem("字体大小", font_menu),
+                pystray.MenuItem("模糊程度", blur_menu),  # 添加模糊程度选项
                 pystray.MenuItem("退出", self.quit_app)
             )
             
@@ -192,16 +207,43 @@ class HeartRateMonitor:
             quit_button = ttk.Button(self.title_frame, text="×", command=self.quit_app)
             quit_button.pack(side=tk.RIGHT, padx=5)
 
-    def quit_app(self, icon=None):  # 添加icon参数以兼容pystray的回调
+    def quit_app(self, icon=None):
+        """安全退出应用程序"""
         try:
+            if self.is_shutting_down:  # 防止重复调用
+                return
+            self.is_shutting_down = True
+            
+            # 停止背景更新
+            if self.update_background_job:
+                self.root.after_cancel(self.update_background_job)
+                self.update_background_job = None
+
+            # 断开设备连接
             if self.connected:
-                asyncio.run_coroutine_threadsafe(self.disconnect_device(), self.loop)
+                # 使用同步方式等待断开连接
+                future = asyncio.run_coroutine_threadsafe(
+                    self.disconnect_device(), 
+                    self.loop
+                )
+                future.result(timeout=3)  # 等待最多3秒
+            
+            # 停止事件循环
+            if self.loop and self.loop.is_running():
+                self.loop.call_soon_threadsafe(self.loop.stop)
+            
+            # 停止系统托盘图标
             if hasattr(self, 'icon'):
                 self.icon.stop()
+            
+            # 确保主窗口关闭
             self.root.quit()
+            
         except Exception as e:
             logging.error(f"退出程序时发生错误: {str(e)}", exc_info=True)
-            self.root.quit()  # 确保程序能够退出
+            # 强制退出
+            import os
+            os._exit(0)
 
     def toggle_always_on_top(self):
         """切换窗口置顶状态"""
@@ -219,49 +261,63 @@ class HeartRateMonitor:
         if self.heart_frame.winfo_ismapped():  # 只在心率显示模式下生效
             if self.click_through:
                 # 启用点击穿透时强制置顶
-                self.root.attributes('-transparentcolor', 'white')
                 self.root.attributes('-topmost', True)
                 self.root.wm_attributes('-disabled', True)
                 self.always_on_top = True
             else:
                 # 禁用点击穿透时恢复原来的置顶状态
-                self.root.attributes('-transparentcolor', 'white')
                 self.root.attributes('-topmost', self.always_on_top)
                 self.root.wm_attributes('-disabled', False)
 
     def show_device_selection(self):
         def _show():
+            # 停止背景更新
+            if self.update_background_job:
+                self.root.after_cancel(self.update_background_job)
+                self.update_background_job = None
+            
             if self.connected:
                 asyncio.run_coroutine_threadsafe(self.disconnect_device(), self.loop)
             self.heart_frame.pack_forget()
             self.title_frame.pack(fill=tk.X)
-            self.root.attributes('-transparentcolor', '')
+            self.root.attributes('-transparentcolor', '')  # 取消透明
             self.root.configure(bg='SystemButtonFace')
-            # 禁用点击穿透
             self.root.wm_attributes('-disabled', False)
             self.device_frame.pack(fill=tk.BOTH, expand=True)
             self.device_list.config(state=tk.NORMAL)
             self.refresh_devices()
             self.root.deiconify()
             self.root.lift()
-            self.root.attributes('-topmost', self.always_on_top)  # 恢复置顶状态
+            self.root.attributes('-topmost', self.always_on_top)
         
         self.root.after(0, _show)
 
     def show_heart_rate_display(self):
         self.device_frame.pack_forget()
         self.title_frame.pack_forget()
-        self.root.configure(bg='white')
-        self.root.attributes('-transparentcolor', 'white')
-        # 使用当前字体大小
-        self.heart_rate_label.configure(font=('Arial', self.font_size, 'bold'))
+        
+        # 设置窗口和控件背景为黑色
+        self.root.configure(bg='black')
+        self.heart_frame.configure(bg='black')
+        self.heart_rate_label.configure(
+            font=('Arial', self.font_size, 'bold'),
+            bg='black'
+        )
+        
         self.heart_frame.pack(fill=tk.BOTH, expand=True)
-        # 根据当前点击穿透状态设置窗口属性
+        
+        # 启动背景更新
+        if self.update_background_job:
+            self.root.after_cancel(self.update_background_job)
+        self.update_background()
+        
+        # 其他窗口属性设置
         if self.click_through:
             self.root.wm_attributes('-disabled', True)
             self.root.attributes('-topmost', True)
         else:
             self.root.attributes('-topmost', self.always_on_top)
+        
         self.root.update_idletasks()
         self.root.geometry('')
 
@@ -281,14 +337,16 @@ class HeartRateMonitor:
         def update_ui():
             self.heart_rate_label.config(
                 text=f"❤ {heart_rate} BPM",
-                bg='white',
-                font=('Arial', self.font_size, 'bold')  # 确保使用当前字体大小
+                font=('Arial', self.font_size, 'bold'),
+                foreground='red',
+                bg='black'
             )
             if self.device_frame.winfo_ismapped():
                 self.show_heart_rate_display()
         self.root.after(0, update_ui)
 
     async def disconnect_device(self):
+        """断开设备连接"""
         try:
             if self.client and self.client.is_connected:
                 await self.client.disconnect()
@@ -296,16 +354,16 @@ class HeartRateMonitor:
             self.connected = False
         except Exception as e:
             logging.error(f"断开连接时发生错误: {str(e)}")
+        finally:
+            self.connected = False
 
     async def connect_device(self, device):
         logging.debug(f'尝试建立BLE连接，目标地址: {device.address}')
         try:
-            self.client = BleakClient(device, timeout=10.0)  # 添加超时时间
-            # 使用 asyncio.wait_for 添加连接超时
+            self.client = BleakClient(device, timeout=10.0)
             await asyncio.wait_for(self.client.connect(), timeout=10.0)
             logging.info(f'成功连接设备: {device.address}')
             
-            # 尝试启动心率通知，也添加超时
             try:
                 await asyncio.wait_for(
                     self.client.start_notify(
@@ -323,7 +381,11 @@ class HeartRateMonitor:
             except asyncio.TimeoutError:
                 logging.error("启动心率通知超时")
                 await self.client.disconnect()
-                raise Exception("获取心率数据失败，请确认是否为心率设备")
+                error_msg = "获取心率数据失败，请确认是否为心率设备"
+                def update_error():
+                    self.label.config(text=error_msg)
+                    self.device_list.config(state=tk.NORMAL)
+                self.root.after(0, update_error)
                 
         except asyncio.TimeoutError:
             logging.error("连接设备超时")
@@ -334,10 +396,11 @@ class HeartRateMonitor:
             self.root.after(0, update_timeout_error)
             
         except Exception as e:
-            logging.error(f"连接设备时发生错误: {str(e)}")
+            error_msg = str(e)  # 在闭包外捕获错误信息
+            logging.error(f"连接设备时发生错误: {error_msg}")
             self.connected = False
             def update_error():
-                self.label.config(text=f"连接错误: {str(e)}")
+                self.label.config(text=f"连接错误: {error_msg}")  # 使用捕获的错误信息
                 self.device_list.config(state=tk.NORMAL)
             self.root.after(0, update_error)
             
@@ -356,6 +419,42 @@ class HeartRateMonitor:
         if self.heart_frame.winfo_ismapped():
             self.root.update_idletasks()
             self.root.geometry('')
+
+    def update_background(self):
+        """更新背景模糊效果"""
+        if not self.heart_frame.winfo_ismapped():
+            return
+        
+        try:
+            # 获取窗口位置和大小
+            x = self.root.winfo_x()
+            y = self.root.winfo_y()
+            width = self.root.winfo_width()
+            height = self.root.winfo_height()
+            
+            # 截取窗口下方的屏幕内容
+            screen = ImageGrab.grab((x, y, x + width, y + height))
+            
+            # 应用高斯模糊
+            blurred = screen.filter(ImageFilter.GaussianBlur(self.blur_radius))
+            
+            # 转换为PhotoImage
+            self.bg_image = ImageTk.PhotoImage(blurred)
+            
+            # 更新背景
+            self.heart_frame.configure(bg='black')
+            self.heart_rate_label.configure(bg='black')
+            
+            # 计划下一次更新
+            self.update_background_job = self.root.after(50, self.update_background)
+            
+        except Exception as e:
+            error_msg = str(e)
+            logging.error(f"更新背景时发生错误: {error_msg}", exc_info=True)
+
+    def change_blur(self, radius):
+        """更改模糊半径"""
+        self.blur_radius = radius
 
 if __name__ == "__main__":
     app = HeartRateMonitor()
