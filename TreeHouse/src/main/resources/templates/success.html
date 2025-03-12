@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分享成功 - 树屋</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <link href="/css/enhanced.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        .alert {
+            border-radius: 10px;
+        }
+        .code-display {
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+            color: #4CAF50;
+            padding: 1rem;
+            background-color: #f1f8e9;
+            border-radius: 10px;
+            margin: 1rem 0;
+            letter-spacing: 3px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+            }
+        }
+        .code-display:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+        .copy-btn {
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .copy-btn:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container main-container">
+        <div class="header">
+            <h1>分享成功</h1>
+            <p th:if="${success}" th:text="${success}">操作成功！</p>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">您的取件码</h5>
+            </div>
+            <div class="card-body text-center">
+                <p>请保存好您的取件码，凭此码可获取您分享的内容</p>
+                
+                <div class="code-display" th:text="${code}">ABCDEF</div>
+                
+                <div class="d-flex justify-content-center mb-3">
+                    <button class="btn btn-outline-secondary copy-btn" onclick="copyCode()">复制取件码</button>
+                </div>
+                
+                <div class="alert alert-info" role="alert">
+                    <p class="mb-1">分享内容默认有效期为7天，最多可被获取10次</p>
+                    <p class="mb-0">请将取件码发送给需要获取内容的人</p>
+                </div>
+                
+                <div class="d-grid gap-2 mt-4">
+                    <a href="/" class="btn btn-primary">返回首页</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function copyCode() {
+            const codeElement = document.querySelector('.code-display');
+            const code = codeElement.textContent;
+            
+            navigator.clipboard.writeText(code).then(function() {
+                // 复制成功
+                const copyBtn = document.querySelector('.copy-btn');
+                copyBtn.textContent = '已复制';
+                copyBtn.classList.remove('btn-outline-secondary');
+                copyBtn.classList.add('btn-success');
+                
+                setTimeout(function() {
+                    copyBtn.textContent = '复制取件码';
+                    copyBtn.classList.remove('btn-success');
+                    copyBtn.classList.add('btn-outline-secondary');
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

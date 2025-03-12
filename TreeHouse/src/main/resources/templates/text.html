@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分享文本 - 树屋</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <link href="/css/enhanced.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        .char-counter {
+            text-align: right;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        .alert {
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container main-container">
+        <div class="header">
+            <h1>分享文本</h1>
+            <p>分享文本内容并获取取件码，文本长度限制为2000字</p>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">文本分享</h5>
+            </div>
+            <div class="card-body">
+                <!-- 错误提示 -->
+                <div th:if="${error}" class="alert alert-danger" role="alert" th:text="${error}"></div>
+                
+                <form method="POST" action="/text">
+                    <div class="mb-3">
+                        <label for="textContent" class="form-label">文本内容</label>
+                        <div class="position-relative">
+                            <textarea class="form-control animate-fade-in" id="textContent" name="textContent" rows="10" maxlength="2000" required placeholder="在此输入要分享的文本内容..."></textarea>
+                            <div class="char-counter mt-1 d-flex justify-content-between align-items-center">
+                                <small class="text-muted">支持Markdown格式</small>
+                                <span><span id="charCount" class="fw-bold">0</span>/2000</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="code" class="form-label">自定义取件码（可选）</label>
+                        <input type="text" class="form-control" id="code" name="code" placeholder="留空将自动生成随机取件码">
+                        <div class="form-text">如果不填写，系统将自动生成以QH开头，长度在6-18位之间的随机取件码</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="expiryDays" class="form-label">有效期（天）</label>
+                        <select class="form-select" id="expiryDays" name="expiryDays">
+                            <option value="1">1天</option>
+                            <option value="3">3天</option>
+                            <option value="7" selected>7天（默认）</option>
+                            <option value="30">30天</option>
+                            <option value="-1">永久有效</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="remainingCount" class="form-label">可获取次数</label>
+                        <select class="form-select" id="remainingCount" name="remainingCount">
+                            <option value="1">1次</option>
+                            <option value="3">3次</option>
+                            <option value="5">5次</option>
+                            <option value="10" selected>10次（默认）</option>
+                            <option value="20">20次</option>
+                            <option value="50">50次</option>
+                            <option value="100">100次</option>
+                        </select>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">分享文本</button>
+                        <a href="/" class="btn btn-secondary">返回首页</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 字符计数器
+        const textArea = document.getElementById('textContent');
+        const charCount = document.getElementById('charCount');
+        
+        textArea.addEventListener('input', function() {
+            const count = this.value.length;
+            charCount.textContent = count;
+            
+            // 如果超过2000字，设置文本颜色为红色
+            if (count > 2000) {
+                charCount.style.color = '#dc3545';
+            } else {
+                charCount.style.color = '#6c757d';
+            }
+        });
+    </script>
+</body>
+</html>

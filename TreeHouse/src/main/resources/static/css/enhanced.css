@@ -1,0 +1,110 @@
+/* 增强的动画效果 */
+.animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 文件上传区域美化 */
+.file-upload-area {
+    border: 2px dashed #4CAF50;
+    border-radius: 10px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    background-color: rgba(76, 175, 80, 0.05);
+    cursor: pointer;
+}
+
+.file-upload-area:hover {
+    border-color: #2E7D32;
+    background-color: rgba(76, 175, 80, 0.1);
+}
+
+/* 进度条样式 */
+.upload-progress {
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #4CAF50, #81C784);
+    transition: width 0.3s ease;
+}
+
+/* 表单输入框美化 */
+.form-control:focus {
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+}
+
+/* 按钮悬浮效果增强 */
+.btn {
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: 0.5s;
+    z-index: -1;
+}
+
+.btn:hover::after {
+    left: 100%;
+}
+
+/* 卡片悬浮效果 */
+.card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+/* 文本区域美化 */
+.form-control[type="text"], .form-control[type="textarea"] {
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+/* 分享码显示优化 */
+.share-code {
+    font-family: 'Courier New', monospace;
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #2E7D32;
+    text-align: center;
+    padding: 2rem;
+    background: linear-gradient(145deg, #f0f0f0, #ffffff);
+    border-radius: 15px;
+    box-shadow: 20px 20px 60px #d0d0d0, -20px -20px 60px #ffffff;
+    margin: 2rem 0;
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+    .main-container {
+        padding: 1rem;
+    }
+    
+    .header h1 {
+        font-size: 1.8rem;
+    }
+    
+    .share-code {
+        font-size: 1.8rem;
+        padding: 1.5rem;
+    }
+}

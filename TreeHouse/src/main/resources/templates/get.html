@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>获取分享内容 - 树屋</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+    <link href="/css/enhanced.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        .alert {
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container main-container">
+        <div class="header">
+            <h1>获取分享内容</h1>
+            <p>输入取件码获取分享的文件或文本内容</p>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">输入取件码</h5>
+            </div>
+            <div class="card-body">
+                <!-- 错误提示 -->
+                <div th:if="${error}" class="alert alert-danger" role="alert" th:text="${error}"></div>
+                
+                <form method="POST" action="/get">
+                    <div class="mb-3">
+                        <label for="code" class="form-label">取件码</label>
+                        <div class="input-group animate-fade-in">
+                            <span class="input-group-text"><i class="fas fa-key"></i></span>
+                            <input type="text" class="form-control" id="code" name="code" placeholder="请输入取件码" required autofocus>
+                        </div>
+                        <div class="form-text">输入您收到的取件码以获取分享内容</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">获取内容</button>
+                        <a href="/" class="btn btn-secondary">返回首页</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
