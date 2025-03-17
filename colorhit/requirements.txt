@@ -1,0 +1,5 @@
+pyautogui>=0.9.54
+Pillow>=9.0.0
+keyboard>=0.13.5
+pynput>=1.7.6
+pyinstaller>=5.13.0

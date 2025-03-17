@@ -1,0 +1,11 @@
+{
+    "r_threshold": 75,
+    "g_threshold": 219,
+    "b_threshold": 106,
+    "area_size": 30,
+    "step": 2,
+    "draw_area": false,
+    "color_tolerance": 30,
+    "check_interval": 0.005,
+    "min_click_interval": 0.1
+}
